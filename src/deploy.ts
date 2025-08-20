@@ -25,18 +25,10 @@ async function saveManifest(manifest: ValManifest): Promise<void> {
 }
 
 async function getValContent(valName: string): Promise<string> {
-  // Special handling for the shared server module
-  if (valName === "mcp-server-shared" || valName === "mcp-server") {
-    const sharedPath = join(Deno.cwd(), "src/shared/mcp-server.ts");
-    return await Deno.readTextFile(sharedPath);
-  }
-
   // Read the val entry file
   const valPath = join(Deno.cwd(), `src/vals/${valName}.ts`);
   const valContent = await Deno.readTextFile(valPath);
 
-  // For deployment, we don't need to bundle - just return the content as-is
-  // Val Town will handle the imports
   return valContent;
 }
 
@@ -109,10 +101,7 @@ async function createVal(name: string, code: string, type: string, token: string
   return val.id;
 }
 
-async function updateVal(valId: string, code: string, type: string, token: string): Promise<void> {
-  // Determine the file name - use main.ts for scripts, http.ts for HTTP vals
-  const fileName = type === "script" ? "main.ts" : "http.ts";
-
+async function upsertValFile(valId: string, fileName: string, content: string, fileType: string, token: string): Promise<void> {
   // First try to update the file
   const response = await fetch(`https://api.val.town/v2/vals/${valId}/files?path=${fileName}`, {
     method: "PUT",
@@ -121,8 +110,8 @@ async function updateVal(valId: string, code: string, type: string, token: strin
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      content: code,
-      type: type,
+      content: content,
+      type: fileType,
     }),
   });
 
@@ -136,20 +125,26 @@ async function updateVal(valId: string, code: string, type: string, token: strin
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          content: code,
-          type: type,
+          content: content,
+          type: fileType,
         }),
       });
 
       if (!createResponse.ok) {
         const error = await createResponse.text();
-        throw new Error(`Failed to create val file: ${error}`);
+        throw new Error(`Failed to create val file ${fileName}: ${error}`);
       }
     } else {
       const error = await response.text();
-      throw new Error(`Failed to update val: ${error}`);
+      throw new Error(`Failed to update val file ${fileName}: ${error}`);
     }
   }
+}
+
+async function updateVal(valId: string, code: string, type: string, token: string): Promise<void> {
+  // Determine the file name - use main.ts for scripts, http.ts for HTTP vals
+  const fileName = type === "script" ? "main.ts" : "http.ts";
+  await upsertValFile(valId, fileName, code, type, token);
 }
 
 async function deployVal(valKey: string): Promise<void> {
@@ -160,12 +155,6 @@ async function deployVal(valKey: string): Promise<void> {
 
   if (!valInfo) {
     throw new Error(`Val ${valKey} not found in manifest`);
-  }
-
-  // Skip the standalone shared server val
-  if (valKey === "mcp-server-shared") {
-    console.log("Skipping standalone shared server val");
-    return;
   }
 
   const token = await getValTownToken();
@@ -188,49 +177,14 @@ async function deployVal(valKey: string): Promise<void> {
 
   // Deploy the shared server file to this val
   console.log(`Adding shared server file to val...`);
-  const sharedPath = join(Deno.cwd(), "src/shared/mcp-server.ts");
+  const sharedPath = join(Deno.cwd(), "src/vals/mcp-server.ts");
   const sharedContent = await Deno.readTextFile(sharedPath);
 
-  // Create or update the mcp-server.ts file in the val
-  const fileResponse = await fetch(`https://api.val.town/v2/vals/${valInfo.id}/files?path=mcp-server.ts`, {
-    method: "PUT",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      content: sharedContent,
-      type: "file",
-    }),
-  });
-
-  if (!fileResponse.ok) {
-    // If file doesn't exist, create it
-    if (fileResponse.status === 404) {
-      const createResponse = await fetch(`https://api.val.town/v2/vals/${valInfo.id}/files?path=mcp-server.ts`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          content: sharedContent,
-          type: "file",
-        }),
-      });
-
-      if (!createResponse.ok) {
-        const error = await createResponse.text();
-        console.error(`Warning: Failed to create shared server file: ${error}`);
-      } else {
-        console.log(`✅ Added shared server file`);
-      }
-    } else {
-      const error = await fileResponse.text();
-      console.error(`Warning: Failed to update shared server file: ${error}`);
-    }
-  } else {
+  try {
+    await upsertValFile(valInfo.id, "mcp-server.ts", sharedContent, "file", token);
     console.log(`✅ Updated shared server file`);
+  } catch (error) {
+    console.error(`Warning: Failed to upsert shared server file: ${error.message}`);
   }
 
   const valUrl = `https://${manifest.vals[valKey].name}.val.run/mcp`;

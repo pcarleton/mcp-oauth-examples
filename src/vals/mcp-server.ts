@@ -154,15 +154,46 @@ function generateIndexHtml(config: ServerConfig): string {
         <div class="endpoints">
             <h2>Available Endpoints</h2>
             ${config.type === "resource" ? `
-                <div class="endpoint">GET /health</div>
-                <div class="endpoint">GET ${config.metadataPath || '/.well-known/oauth-protected-resource'}</div>
-                <div class="endpoint">POST /mcp (requires Bearer token)</div>
+                <div class="endpoint"><a href="/health" target="_blank">GET /health</a></div>
+                <div class="endpoint"><a href="${config.metadataPath || '/.well-known/oauth-protected-resource'}" target="_blank">GET ${config.metadataPath || '/.well-known/oauth-protected-resource'}</a></div>
+                <div class="endpoint">
+                    <div>POST /mcp (requires Bearer token)</div>
+                    <textarea readonly id="mcp-curl" style="width: 100%; height: 60px; margin-top: 8px; font-family: monospace; font-size: 12px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: #f8f9fa;"></textarea>
+                </div>
             ` : `
-                <div class="endpoint">GET /health</div>
-                <div class="endpoint">GET /.well-known/openid-configuration</div>
-                <div class="endpoint">GET /authorize</div>
-                <div class="endpoint">POST /token</div>
+                <div class="endpoint"><a href="/health" target="_blank">GET /health</a></div>
+                <div class="endpoint"><a href="/.well-known/openid-configuration" target="_blank">GET /.well-known/openid-configuration</a></div>
+                <div class="endpoint"><a href="/authorize" target="_blank">GET /authorize</a></div>
+                <div class="endpoint">
+                    <div>POST /token</div>
+                    <textarea readonly id="token-curl" style="width: 100%; height: 80px; margin-top: 8px; font-family: monospace; font-size: 12px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: #f8f9fa;"></textarea>
+                </div>
             `}
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const origin = window.location.origin;
+
+                ${config.type === "resource" ? `
+                    const mcpCurl = document.getElementById('mcp-curl');
+                    if (mcpCurl) {
+                        mcpCurl.textContent = \`curl -X POST \${origin}/mcp \\\\
+  -H "Authorization: Bearer ${config.fixedAccessToken}" \\\\
+  -H "Content-Type: application/json" \\\\
+  -H 'Accept: application/json, text/event-stream' \\\\
+  -d '{"jsonrpc": "2.0", "method": "tools/list", "id": 1}'\`;
+                    }
+                ` : `
+                    const tokenCurl = document.getElementById('token-curl');
+                    if (tokenCurl) {
+                        tokenCurl.textContent = \`curl -X POST \${origin}/token \\\\
+  -H "Content-Type: application/x-www-form-urlencoded" \\\\
+  -d "grant_type=authorization_code&code=${config.fixedAuthCode || 'test_auth_code_123'}&redirect_uri=http://localhost:3000/callback"\`;
+                    }
+                `}
+            });
+        </script>
         </div>
 
         <div class="note">
@@ -495,5 +526,5 @@ export function startServer(config: ServerConfig) {
     console.log(`  Health: http://localhost:${port}/health`);
   }
 
-  Deno.serve({ port }, app.fetch);
+  Deno.serve({ port, hostname: "127.0.0.1" }, app.fetch);
 }
