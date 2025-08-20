@@ -195,12 +195,18 @@ export default async function(req: Request): Promise<Response> {
           <h4>Testing the Examples</h4>
           <p>You can test these endpoints using:</p>
           <ul>
+            <li>Live production clients</li>
             <li><code>curl</code> with Authorization headers</li>
             <li>MCP client libraries</li>
             <li>OAuth testing tools like Postman</li>
           </ul>
           <p><strong>Example request:</strong></p>
-          <code>curl -H "Authorization: Bearer test_access_token_abc" https://mcp-oauth-ex1.val.run/mcp</code>
+          <textarea readonly id="token-curl" style="width: 100%; height: 80px; margin-top: 8px; font-family: monospace; font-size: 12px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: #f8f9fa;">
+curl -X POST https://mcp-oauth-ex1.val.run/mcp \\
+  -H "Authorization: Bearer test_access_token_abc" \\
+  -H "Content-Type: application/json" \\
+  -H 'Accept: application/json, text/event-stream' \\
+  -d '{"jsonrpc": "2.0", "method": "tools/list", "id": 1}'</textarea>
         </div>
 
         <h2>📖 Documentation</h2>
