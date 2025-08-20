@@ -166,9 +166,6 @@ export default async function(req: Request): Promise<Response> {
             <ul>
               <li>WWW-Authenticate header included</li>
               <li>PRM metadata at custom location</li>
-              <li>Custom token validation logic</li>
-              <li>Extended metadata support</li>
-              <li>Flexible configuration</li>
             </ul>
             <div class="links">
               <a href="https://mcp-oauth-ex3.val.run/mcp">MCP Endpoint<br><small>https://mcp-oauth-ex3.val.run/mcp</small></a>
@@ -181,9 +178,9 @@ export default async function(req: Request): Promise<Response> {
             <p>A simple OAuth authorization server for testing with the example resource servers.</p>
             <p><strong>Features:</strong></p>
             <ul>
-              <li>Token issuance endpoint</li>
-              <li>Client credentials flow</li>
-              <li>Token introspection</li>
+              <li>Metadata at the root</li>
+              <li>Fixed access and refresh token</li>
+              <li>PKCE validation</li>
             </ul>
             <div class="links">
               <a href="https://mcp-oauth-as1.val.run/">Server Home<br><small>https://mcp-oauth-as1.val.run/</small></a>
