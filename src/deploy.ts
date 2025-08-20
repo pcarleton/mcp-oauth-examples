@@ -30,11 +30,11 @@ async function getValContent(valName: string): Promise<string> {
     const sharedPath = join(Deno.cwd(), "src/shared/mcp-server.ts");
     return await Deno.readTextFile(sharedPath);
   }
-  
+
   // Read the val entry file
   const valPath = join(Deno.cwd(), `src/vals/${valName}.ts`);
   const valContent = await Deno.readTextFile(valPath);
-  
+
   // For deployment, we don't need to bundle - just return the content as-is
   // Val Town will handle the imports
   return valContent;
@@ -43,7 +43,7 @@ async function getValContent(valName: string): Promise<string> {
 async function getValTownToken(): Promise<string> {
   // Try to get token from environment
   let token = Deno.env.get("VAL_TOWN_TOKEN");
-  
+
   if (!token) {
     // Try to read from .env file
     try {
@@ -56,11 +56,11 @@ async function getValTownToken(): Promise<string> {
       // .env file doesn't exist
     }
   }
-  
+
   if (!token) {
     throw new Error("Val Town token not found. Set VAL_TOWN_TOKEN environment variable or add it to .env file");
   }
-  
+
   return token;
 }
 
@@ -77,17 +77,17 @@ async function createVal(name: string, code: string, type: string, token: string
       privacy: "public",
     }),
   });
-  
+
   if (!createResponse.ok) {
     const error = await createResponse.text();
     throw new Error(`Failed to create val: ${error}`);
   }
-  
+
   const val = await createResponse.json();
-  
+
   // Determine the file name - for new vals, we need to use the main file
   const fileName = type === "script" ? "main.ts" : "http.ts";
-  
+
   // Then create the file (new vals don't have files yet)
   const updateResponse = await fetch(`https://api.val.town/v2/vals/${val.id}/files?path=${fileName}`, {
     method: "POST",  // Use POST to create the file
@@ -100,19 +100,19 @@ async function createVal(name: string, code: string, type: string, token: string
       type: type,
     }),
   });
-  
+
   if (!updateResponse.ok) {
     const error = await updateResponse.text();
     throw new Error(`Failed to create val file: ${error}`);
   }
-  
+
   return val.id;
 }
 
 async function updateVal(valId: string, code: string, type: string, token: string): Promise<void> {
   // Determine the file name - use main.ts for scripts, http.ts for HTTP vals
   const fileName = type === "script" ? "main.ts" : "http.ts";
-  
+
   // First try to update the file
   const response = await fetch(`https://api.val.town/v2/vals/${valId}/files?path=${fileName}`, {
     method: "PUT",
@@ -125,7 +125,7 @@ async function updateVal(valId: string, code: string, type: string, token: strin
       type: type,
     }),
   });
-  
+
   if (!response.ok) {
     // If the file doesn't exist (404), try to create it
     if (response.status === 404) {
@@ -140,7 +140,7 @@ async function updateVal(valId: string, code: string, type: string, token: strin
           type: type,
         }),
       });
-      
+
       if (!createResponse.ok) {
         const error = await createResponse.text();
         throw new Error(`Failed to create val file: ${error}`);
@@ -154,24 +154,24 @@ async function updateVal(valId: string, code: string, type: string, token: strin
 
 async function deployVal(valKey: string): Promise<void> {
   console.log(`\nDeploying ${valKey}...`);
-  
+
   const manifest = await loadManifest();
   const valInfo = manifest.vals[valKey];
-  
+
   if (!valInfo) {
     throw new Error(`Val ${valKey} not found in manifest`);
   }
-  
+
   // Skip the standalone shared server val
   if (valKey === "mcp-server-shared") {
     console.log("Skipping standalone shared server val");
     return;
   }
-  
+
   const token = await getValTownToken();
   const valContent = await getValContent(valKey);
   const valType = valInfo.type || "http";
-  
+
   if (!valInfo.id) {
     // Create new val
     console.log(`Creating new val: ${valInfo.name}`);
@@ -185,12 +185,12 @@ async function deployVal(valKey: string): Promise<void> {
     await updateVal(valInfo.id, valContent, valType, token);
     console.log(`✅ Updated val: ${valInfo.id}`);
   }
-  
+
   // Deploy the shared server file to this val
   console.log(`Adding shared server file to val...`);
   const sharedPath = join(Deno.cwd(), "src/shared/mcp-server.ts");
   const sharedContent = await Deno.readTextFile(sharedPath);
-  
+
   // Create or update the mcp-server.ts file in the val
   const fileResponse = await fetch(`https://api.val.town/v2/vals/${valInfo.id}/files?path=mcp-server.ts`, {
     method: "PUT",
@@ -203,7 +203,7 @@ async function deployVal(valKey: string): Promise<void> {
       type: "file",
     }),
   });
-  
+
   if (!fileResponse.ok) {
     // If file doesn't exist, create it
     if (fileResponse.status === 404) {
@@ -218,7 +218,7 @@ async function deployVal(valKey: string): Promise<void> {
           type: "file",
         }),
       });
-      
+
       if (!createResponse.ok) {
         const error = await createResponse.text();
         console.error(`Warning: Failed to create shared server file: ${error}`);
@@ -232,28 +232,16 @@ async function deployVal(valKey: string): Promise<void> {
   } else {
     console.log(`✅ Updated shared server file`);
   }
-  
-  // Get val URL
-  const userResponse = await fetch("https://api.val.town/v1/me", {
-    headers: {
-      "Authorization": `Bearer ${token}`,
-    },
-  });
-  
-  if (userResponse.ok) {
-    const user = await userResponse.json();
-    const valUrl = valType === "script" 
-      ? `https://esm.town/v/${user.username}/${valInfo.name.replace(/_/g, "-")}`
-      : `https://${user.username}-${valInfo.name.replace(/_/g, "-")}.web.val.run`;
-    manifest.vals[valKey].url = valUrl;
-    await saveManifest(manifest);
-    console.log(`📍 Val URL: ${valUrl}`);
-  }
+
+  const valUrl = `https://${manifest.vals[valKey].name}.val.run/mcp`;
+  manifest.vals[valKey].url = valUrl;
+  await saveManifest(manifest);
+  console.log(`📍 Val URL: ${valUrl}`);
 }
 
 async function main() {
   const args = Deno.args;
-  
+
   if (args.length === 0) {
     console.log("Usage: deno run deploy.ts <val-key> [val-key2 ...]");
     console.log("\nAvailable vals:");
@@ -264,7 +252,7 @@ async function main() {
     }
     Deno.exit(0);
   }
-  
+
   if (args[0] === "all") {
     const manifest = await loadManifest();
     for (const key of Object.keys(manifest.vals)) {
@@ -275,7 +263,7 @@ async function main() {
       await deployVal(valKey);
     }
   }
-  
+
   console.log("\n✨ Deployment complete!");
 }
 

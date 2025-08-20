@@ -3,10 +3,10 @@ import { createServer, startServer, ServerConfig } from "./mcp-server.ts";
 
 const config: ServerConfig = {
   type: "resource",
-  name: "mcp-oauth-example1-rs",
-  port: 3001, // For local testing
-  metadataPath: "/.well-known/oauth-protected-resource-abc123",
-  authServerUrl: Deno.env.get("EX1_AS_URL") || "https://mcp-oauth-as1.val.run/",
+  name: "mcp-oauth-ex3",
+  port: 3011, // For local testing
+  metadataPath: "/custom/metadata-path",
+  authServerUrl: "https://mcp-oauth-as1.val.run/",
   fixedAccessToken: "test_access_token_abc",
 };
 
