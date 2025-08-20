@@ -1,192 +1,117 @@
-# MCP OAuth Examples
+# MCP OAuth Examples for Val Town
 
-Example MCP (Model Context Protocol) servers demonstrating OAuth 2.0 authentication patterns, designed for deployment on Val Town's serverless platform.
+Example MCP (Model Context Protocol) servers demonstrating OAuth 2.0 authentication patterns, designed for Val Town deployment using Deno.
 
 ## Overview
 
-This project provides working examples of MCP servers with OAuth 2.0 authentication, showcasing different metadata discovery patterns and authentication flows. Each example consists of:
-
-- **Resource Server (RS)**: An MCP server protected by OAuth 2.0
-- **Authorization Server (AS)**: Handles OAuth authorization and token issuance
-
-These examples are designed to help developers understand and test OAuth-protected MCP implementations with real production clients.
-
-## Project Goals
-
-1. **Demonstrate OAuth Patterns**: Show different ways to configure OAuth metadata discovery
-2. **Test Client Compatibility**: Provide endpoints for testing MCP clients with OAuth
-3. **Educational Resource**: Help developers understand OAuth 2.0 in the MCP context
-4. **Production-Ready Testing**: Allow testing with real clients, not just test harnesses
+This project provides working examples of MCP servers with OAuth 2.0 authentication that can be:
+- Run locally with Deno for development
+- Deployed directly to Val Town for production use
+- Tested with real MCP clients that support OAuth 2.0
 
 ## Examples
 
-### Example 1: WWW-Authenticate with Random PRM Location
-
+### Example 1: Random PRM Location
 - **Resource Server**: Protected Resource Metadata at `/.well-known/oauth-protected-resource-abc123`
 - **Auth Server**: Standard OAuth metadata at `/.well-known/oauth-authorization-server`
-- **Pattern**: Demonstrates non-standard metadata location with WWW-Authenticate header
+- **Use Case**: Demonstrates non-standard metadata location with WWW-Authenticate header
 
-### Example 2: Path-Aware PRM Location
-
+### Example 2: Path-Aware PRM Location  
 - **Resource Server**: Tenant-specific metadata at `/.well-known/oauth-protected-resource/tenant1`
 - **Auth Server**: Issuer with path `/tenant1`, metadata at `/.well-known/oauth-authorization-server/tenant1`
-- **Pattern**: Shows multi-tenant OAuth setup with path-based isolation
+- **Use Case**: Shows multi-tenant OAuth setup with path-based isolation
 
 ## Quick Start
 
 ### Prerequisites
-
-- Node.js 18+ and npm
-- Val Town account and API key
-- Val Town CLI (`npm install -g @val-town/vt`)
-
-### Installation
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd mcp-oauth-examples
-
-# Install dependencies
-npm install
-
-# Copy environment variables
-cp .env.example .env
-# Edit .env and add your Val Town API key
-```
+- [Deno](https://deno.com/) installed
+- Val Town account (for deployment)
 
 ### Local Development
 
 ```bash
-# Test locally (requires @hono/node-server)
-npm install --save-dev @hono/node-server
-npm run test:local
+# Run Example 1
+deno task ex1:rs  # Start resource server on port 3001
+deno task ex1:as  # Start auth server on port 3002 (in another terminal)
+
+# Run Example 2
+deno task ex2:rs  # Start resource server on port 3011
+deno task ex2:as  # Start auth server on port 3012 (in another terminal)
+
+# Test the servers
+deno task test:ex1  # Test Example 1
+deno task test:ex2  # Test Example 2
 ```
 
-### Deployment to Val Town
+### Deploy to Val Town
 
-```bash
-# Set up Val Town CLI
-vt auth
-
-# Deploy all examples
-npm run deploy
-
-# Or deploy individual examples
-npm run deploy:ex1  # Deploy Example 1
-npm run deploy:ex2  # Deploy Example 2
-```
-
-After deployment, update your `.env` file with the actual Val Town URLs.
+1. Copy the content of any example file (e.g., `src/examples/example1-rs.ts`)
+2. Create a new HTTP val in Val Town
+3. Paste the code
+4. Deploy and note the URL
+5. Update the corresponding server's AUTH_SERVER_URL if needed
 
 ## Testing with MCP Clients
 
-### Configure Your MCP Client
+### Test without authentication (should return 401):
+```bash
+curl -X POST https://your-val.web.val.run/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"0.1.0","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}},"id":1}'
+```
 
-For each example, configure your MCP client with:
+### Test with authentication:
+```bash
+curl -X POST https://your-val.web.val.run/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer test_access_token_abc" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","method":"tools/list","params":{},"id":1}'
+```
 
-1. **MCP Endpoint**: `https://[username]-mcp-oauth-ex1-rs.web.val.run/mcp`
-2. **OAuth Discovery**: The client should automatically discover OAuth metadata
-
-### OAuth Flow
+## OAuth Flow
 
 1. Client requests MCP endpoint without authentication
-2. Server returns 401 with WWW-Authenticate header pointing to metadata
+2. Server returns 401 with `WWW-Authenticate` header
 3. Client fetches Protected Resource Metadata
 4. Client fetches Authorization Server Metadata
-5. Client initiates OAuth authorization flow
-6. After authorization, client receives access token
+5. Client performs OAuth authorization flow with PKCE
+6. Client receives access token
 7. Client retries MCP request with Bearer token
 
-### Test Credentials
+## Test Credentials
 
-All examples use fixed test credentials for predictable testing:
-
+All examples use fixed test credentials:
 - **Access Token**: `test_access_token_abc`
 - **Refresh Token**: `test_refresh_token_xyz`
 - **Client ID**: `test_client_id`
 - **Authorization Code**: `test_auth_code_123`
 
-## Available MCP Tools
+## Available MCP Tool
 
-Each resource server provides a simple `add` tool for testing:
-
+Each server provides a simple `add` tool:
 ```json
 {
   "name": "add",
   "description": "Add two numbers together",
-  "inputSchema": {
-    "type": "object",
-    "properties": {
-      "a": { "type": "number" },
-      "b": { "type": "number" }
-    }
-  }
+  "arguments": {"a": 5, "b": 3}
 }
 ```
 
-## Architecture
+## Project Structure
 
 ```
-┌─────────────┐       ┌──────────────┐       ┌─────────────┐
-│ MCP Client  │──────>│Resource      │──────>│    Auth     │
-│             │       │Server (RS)   │       │Server (AS)  │
-└─────────────┘       └──────────────┘       └─────────────┘
-      │                      │                       │
-      │   1. Request         │                       │
-      │   ────────────>      │                       │
-      │                      │                       │
-      │   2. 401 + WWW-Auth  │                       │
-      │   <────────────      │                       │
-      │                      │                       │
-      │   3. Get Metadata    │                       │
-      │   ────────────>      │                       │
-      │                      │                       │
-      │   4. OAuth Flow      │                       │
-      │   ─────────────────────────────────────>    │
-      │                      │                       │
-      │   5. Access Token    │                       │
-      │   <─────────────────────────────────────    │
-      │                      │                       │
-      │   6. Request + Token │                       │
-      │   ────────────>      │                       │
-      │                      │                       │
-      │   7. MCP Response    │                       │
-      │   <────────────      │                       │
+mcp-oauth-examples/
+├── src/
+│   └── examples/
+│       ├── example1-rs.ts  # Example 1 Resource Server
+│       ├── example1-as.ts  # Example 1 Auth Server
+│       ├── example2-rs.ts  # Example 2 Resource Server
+│       └── example2-as.ts  # Example 2 Auth Server
+├── deno.json               # Deno configuration and tasks
+└── README.md               # This file
 ```
-
-## Environment Variables
-
-```bash
-# Val Town API key for deployment
-VAL_TOWN_API_KEY=your_api_key_here
-
-# Example URLs (set after deployment)
-EX1_RS_URL=https://username-mcp-oauth-ex1-rs.web.val.run
-EX1_AS_URL=https://username-mcp-oauth-ex1-as.web.val.run
-EX2_RS_URL=https://username-mcp-oauth-ex2-rs.web.val.run
-EX2_AS_URL=https://username-mcp-oauth-ex2-as.web.val.run
-```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **401 Unauthorized**: Check that your client supports OAuth discovery via WWW-Authenticate
-2. **PKCE Validation Failed**: Ensure your client implements PKCE with S256 method
-3. **Metadata Not Found**: Verify the metadata URLs match the example configuration
-4. **Val Town Deployment Issues**: Check that your API key has proper permissions
-
-### Debug Endpoints
-
-Each server provides health check endpoints:
-
-- Resource Server: `/health`
-- Auth Server: `/health`
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit issues or pull requests.
 
 ## License
 
