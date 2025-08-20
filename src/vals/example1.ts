@@ -5,7 +5,8 @@ const config: ServerConfig = {
   type: "resource",
   name: "mcp-oauth-ex1",
   port: 3001, // For local testing
-  metadataPath: "/.well-known/oauth-protected-resource-abc123",
+  metadataPath: "/.well-known/oauth-protected-resource",
+  includeWwwAuthenticate: true,
   authServerUrl: "https://mcp-oauth-as1.val.run/",
   fixedAccessToken: "test_access_token_abc",
 };

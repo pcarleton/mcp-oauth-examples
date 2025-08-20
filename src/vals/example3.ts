@@ -6,6 +6,7 @@ const config: ServerConfig = {
   name: "mcp-oauth-ex3",
   port: 3011, // For local testing
   metadataPath: "/custom/metadata-path",
+  includeWwwAuthenticate: true,
   authServerUrl: "https://mcp-oauth-as1.val.run/",
   fixedAccessToken: "test_access_token_abc",
 };

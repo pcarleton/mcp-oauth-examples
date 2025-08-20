@@ -13,11 +13,12 @@ export interface ServerConfig {
   // Resource server specific
   metadataPath?: string;
   authServerUrl?: string;
-  
+  includeWwwAuthenticate?: boolean;  // Whether to include WWW-Authenticate header
+
   // Auth server specific
   issuer?: string;
   tenantPath?: string;
-  
+
   // Common
   fixedAccessToken: string;
   fixedRefreshToken?: string;
@@ -87,6 +88,13 @@ function createResourceServer(config: ServerConfig) {
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       const resourceMetadataUrl = `https://${c.req.header("host")}${config.metadataPath}`;
 
+      const responseHeaders: Record<string, string> = {};
+
+      // Only include WWW-Authenticate header if configured
+      if (config.includeWwwAuthenticate !== false) {
+        responseHeaders["WWW-Authenticate"] = `Bearer resource_metadata="${resourceMetadataUrl}"`;
+      }
+
       return c.json({
         jsonrpc: "2.0",
         error: {
@@ -96,9 +104,7 @@ function createResourceServer(config: ServerConfig) {
         id: null,
       }, {
         status: 401,
-        headers: {
-          "WWW-Authenticate": `Bearer resource_metadata="${resourceMetadataUrl}"`,
-        },
+        headers: responseHeaders,
       });
     }
 

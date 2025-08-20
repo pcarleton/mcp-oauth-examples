@@ -9,7 +9,7 @@
     "example1": {
       "id": "5ceecdf6-7da3-11f0-9bf4-0224a6c84d84",
       "name": "mcp-oauth-ex1",
-      "url": "https://mcp-oauth-ex1/mcp",
+      "url": "https://mcp-oauth-ex1.val.run/mcp",
       "type": "http"
     },
     "as1": {
@@ -21,7 +21,7 @@
     "example2": {
       "id": "8a734b30-7da3-11f0-b7ff-0224a6c84d84",
       "name": "mcp-oauth-ex2",
-      "url": "https://mcp-oauth-ex2/mcp",
+      "url": "https://mcp-oauth-ex2.val.run/mcp",
       "type": "http"
     },
     "example3": {
