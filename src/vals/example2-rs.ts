@@ -5,11 +5,8 @@ const config: ServerConfig = {
   type: "resource",
   name: "mcp-oauth-example2-tenant1-rs",
   port: 3011, // For local testing
-  metadataPath: "/.well-known/oauth-protected-resource/tenant1",
-  authServerUrl: typeof Deno !== "undefined" && Deno.env.get("LOCAL_DEV")
-    ? (Deno.env.get("EX2_AS_URL") || "http://localhost:3012")
-    : "https://pcarleton-mcp-oauth-ex2-as.web.val.run",
-  tenantPath: "/tenant1",
+  metadataPath: "/.well-known/oauth-protected-resource",
+  authServerUrl: Deno.env.get("EX1_AS_URL") || "https://mcp-oauth-as1.val.run/",
   fixedAccessToken: "test_access_token_abc",
 };
 

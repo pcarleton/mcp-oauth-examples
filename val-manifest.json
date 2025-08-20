@@ -21,7 +21,7 @@
     "example2-rs": {
       "id": "8a734b30-7da3-11f0-b7ff-0224a6c84d84",
       "name": "mcp-oauth-ex2-rs",
-      "url": null,
+      "url": "https://pcarleton-mcp-oauth-ex2-rs.web.val.run",
       "type": "http"
     },
     "example2-as": {
