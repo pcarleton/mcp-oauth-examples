@@ -209,8 +209,9 @@ export default async function(req: Request): Promise<Response> {
         <h2>📖 Documentation</h2>
         <p>For more information about MCP and OAuth:</p>
         <ul>
-          <li><a href="https://modelcontextprotocol.io" target="_blank">Model Context Protocol Documentation</a></li>
-          <li><a href="https://tools.ietf.org/html/rfc6749" target="_blank">OAuth 2.0 Specification (RFC 6749)</a></li>
+          <li><a href="https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization" target="_blank">Model Context Protocol Documentation</a></li>
+          <li><a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1" target="_blank">OAuth 2.1 Specification</a></li>
+          <li><a href="https://datatracker.ietf.org/doc/rfc9728/" target="_blank">OAuth 2.0 Protected Resource Metadata</a></li>
           <li><a href="https://github.com/pcarleton/mcp-oauth-examples" target="_blank">Source Code on GitHub</a></li>
         </ul>
 
