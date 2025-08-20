@@ -1,0 +1,34 @@
+{
+  "vals": {
+    "mcp-server-shared": {
+      "id": "6628b72a-7dc0-11f0-8f01-0224a6c84d84",
+      "name": "mcp-oauth-server",
+      "url": "https://esm.town/v/pcarleton/mcp-oauth-server",
+      "type": "script"
+    },
+    "example1-rs": {
+      "id": "5ceecdf6-7da3-11f0-9bf4-0224a6c84d84",
+      "name": "mcp-oauth-ex1-rs",
+      "url": "https://pcarleton-mcp-oauth-ex1-rs.web.val.run",
+      "type": "http"
+    },
+    "example1-as": {
+      "id": "31525f72-7da4-11f0-be40-0224a6c84d84",
+      "name": "mcp-oauth-ex1-as",
+      "url": null,
+      "type": "http"
+    },
+    "example2-rs": {
+      "id": "8a734b30-7da3-11f0-b7ff-0224a6c84d84",
+      "name": "mcp-oauth-ex2-rs",
+      "url": null,
+      "type": "http"
+    },
+    "example2-as": {
+      "id": null,
+      "name": "mcp-oauth-ex2-as",
+      "url": null,
+      "type": "http"
+    }
+  }
+}

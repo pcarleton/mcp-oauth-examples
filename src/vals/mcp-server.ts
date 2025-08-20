@@ -1,0 +1,1 @@
+../shared/mcp-server.ts
