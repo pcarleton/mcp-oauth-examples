@@ -5,7 +5,7 @@ const config: ServerConfig = {
   type: "resource",
   name: "mcp-oauth-ex1",
   metadataPath: "/.well-known/oauth-protected-resource",
-  includeWwwAuthenticate: true,
+  includeWwwAuthenticate: false,
   authServerUrl: "https://mcp-oauth-as1.val.run/",
   fixedAccessToken: "test_access_token_abc",
 };
