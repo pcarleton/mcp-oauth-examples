@@ -4,7 +4,6 @@ import { createServer, startServer, ServerConfig } from "./mcp-server.ts";
 const config: ServerConfig = {
   type: "resource",
   name: "mcp-oauth-ex2",
-  port: 3011, // For local testing
   metadataPath: "/.well-known/oauth-protected-resource/mcp",
   includeWwwAuthenticate: false,
   authServerUrl: "https://mcp-oauth-as1.val.run/",

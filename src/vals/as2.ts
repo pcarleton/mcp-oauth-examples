@@ -4,7 +4,6 @@ import { createServer, startServer, ServerConfig } from "./mcp-server.ts";
 const config: ServerConfig = {
   type: "auth",
   name: "mcp-oauth-example2-tenant1-as",
-  port: 3012, // For local testing
   tenantPath: "/tenant1",
   fixedAccessToken: "test_access_token_abc",
   fixedRefreshToken: "test_refresh_token_xyz",
