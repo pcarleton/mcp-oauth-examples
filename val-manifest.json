@@ -29,6 +29,12 @@
       "name": "mcp-oauth-ex3",
       "url": "https://mcp-oauth-ex3.val.run/mcp",
       "type": "http"
+    },
+    "client1": {
+      "id": "c4e66488-7e6f-11f0-b3ed-0224a6c84d84",
+      "name": "mcp-oauth-client1",
+      "url": "https://mcp-oauth-client1.val.run/mcp",
+      "type": "http"
     }
   }
 }

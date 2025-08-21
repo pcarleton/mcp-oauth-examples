@@ -219,7 +219,7 @@ function createResourceServer(config: ServerConfig) {
 
   // OAuth Protected Resource metadata endpoint
   app.get(config.metadataPath!, (c) => {
-    const resourceUrl = `https://${c.req.header("host")}`;
+    const resourceUrl = `https://${c.req.header("host")}/mcp`;
     const authServers = config.tenantPath
       ? [`${config.authServerUrl}${config.tenantPath}`]
       : [config.authServerUrl!];
