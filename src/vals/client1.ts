@@ -1,7 +1,7 @@
 // Browser-based MCP OAuth Client for Val.town
 // This client demonstrates OAuth authentication flow with an MCP server
 
-export default async function (req: Request): Promise<Response> {
+async function handleRequest(req: Request): Promise<Response> {
   const url = new URL(req.url);
 
   // Handle OAuth callback
@@ -221,12 +221,95 @@ export default async function (req: Request): Promise<Response> {
 
         <script type="module">
           // Import MCP SDK from esm.sh with direct dist/esm paths
-          import { Client } from 'https://esm.sh/@modelcontextprotocol/sdk@1.17.2/dist/esm/client';
-          import { StreamableHTTPClientTransport } from 'https://esm.sh/@modelcontextprotocol/sdk@1.17.2/dist/esm/client/streamableHttp';
+          import { Client } from 'https://esm.sh/@modelcontextprotocol/sdk@latest/dist/esm/client';
+          import { StreamableHTTPClientTransport } from 'https://esm.sh/@modelcontextprotocol/sdk@latest/dist/esm/client/streamableHttp';
+          import { UnauthorizedError } from 'https://esm.sh/@modelcontextprotocol/sdk@latest/dist/esm/client/auth';
+
+          // OAuth Provider implementation for browser
+          class BrowserOAuthProvider {
+            constructor(redirectUrl, clientMetadata) {
+              this._redirectUrl = redirectUrl;
+              this._clientMetadata = clientMetadata;
+              this._clientInformation = null;
+              this._tokens = null;
+              this._codeVerifier = null;
+              this._authCode = null;
+            }
+
+            get redirectUrl() {
+              return this._redirectUrl;
+            }
+
+            get clientMetadata() {
+              return this._clientMetadata;
+            }
+
+            clientInformation() {
+              return this._clientInformation;
+            }
+
+            saveClientInformation(clientInformation) {
+              this._clientInformation = clientInformation;
+            }
+
+            tokens() {
+              return this._tokens;
+            }
+
+            saveTokens(tokens) {
+              this._tokens = tokens;
+              window.log('Tokens saved successfully', 'auth');
+            }
+
+            async redirectToAuthorization(authorizationUrl) {
+              window.log('Opening authorization window...', 'auth');
+
+              return new Promise((resolve, reject) => {
+                // Open auth window
+                const authWindow = window.open(authorizationUrl.toString(), '_blank', 'width=600,height=700');
+
+                // Listen for callback
+                const messageHandler = (event) => {
+                  if (event.data.type === 'oauth_callback') {
+                    window.log('Received authorization code', 'auth');
+                    this._authCode = event.data.code;
+                    window.removeEventListener('message', messageHandler);
+                    resolve();
+                  }
+                };
+
+                window.addEventListener('message', messageHandler);
+
+                // Timeout after 5 minutes
+                setTimeout(() => {
+                  window.removeEventListener('message', messageHandler);
+                  reject(new Error('Authorization timeout'));
+                }, 300000);
+              });
+            }
+
+            async getAuthCode() {
+              if (this._authCode) {
+                return this._authCode;
+              }
+              throw new Error('No authorization code');
+            }
+
+            saveCodeVerifier(codeVerifier) {
+              this._codeVerifier = codeVerifier;
+            }
+
+            codeVerifier() {
+              if (!this._codeVerifier) {
+                throw new Error('No code verifier saved');
+              }
+              return this._codeVerifier;
+            }
+          }
 
           let client = null;
           let transport = null;
-          let authTokens = null;
+          let oauthProvider = null;
 
           window.log = function(message, type = 'info') {
             const logDiv = document.getElementById('log');
@@ -272,6 +355,18 @@ export default async function (req: Request): Promise<Response> {
             try {
               log('Initializing MCP client...', 'info');
 
+              // Set up OAuth provider
+              const clientMetadata = {
+                client_name: 'Browser Test Client',
+                redirect_uris: [callbackUrl],
+                grant_types: ['authorization_code', 'refresh_token'],
+                response_types: ['code'],
+                token_endpoint_auth_method: 'none',
+                scope: 'mcp'
+              };
+
+              oauthProvider = new BrowserOAuthProvider(callbackUrl, clientMetadata);
+
               // Create the client
               client = new Client({
                 name: 'browser-oauth-client',
@@ -280,65 +375,55 @@ export default async function (req: Request): Promise<Response> {
                 capabilities: {}
               });
 
-              // Create transport with OAuth configuration
+              // Create transport with OAuth provider
               transport = new StreamableHTTPClientTransport(
                 new URL(serverUrl),
                 {
-                  oauth: {
-                    clientId: 'browser-client',
-                    redirectUri: callbackUrl,
-                    scope: 'mcp',
-                    authorizationUrl: serverUrl + '/oauth/authorize',
-                    tokenUrl: serverUrl + '/oauth/token',
-                    onAuthorizationRequest: async (authUrl) => {
-                      log('Opening authorization window...', 'auth');
-
-                      return new Promise((resolve, reject) => {
-                        // Open auth window
-                        const authWindow = window.open(authUrl, '_blank', 'width=600,height=700');
-
-                        // Listen for callback
-                        const messageHandler = (event) => {
-                          if (event.data.type === 'oauth_callback') {
-                            log('Received authorization code', 'auth');
-                            window.removeEventListener('message', messageHandler);
-                            resolve(event.data.code);
-                          }
-                        };
-
-                        window.addEventListener('message', messageHandler);
-
-                        // Timeout after 5 minutes
-                        setTimeout(() => {
-                          window.removeEventListener('message', messageHandler);
-                          reject(new Error('Authorization timeout'));
-                        }, 300000);
-                      });
-                    },
-                    onTokensReceived: (tokens) => {
-                      authTokens = tokens;
-                      log('Received access tokens', 'auth');
-                    }
-                  }
+                  authProvider: oauthProvider
                 }
               );
 
-              log('Connecting to server...', 'info');
-              await client.connect(transport);
+              // Try to connect - handle OAuth if needed
+              try {
+                log('Connecting to server...', 'info');
+                await client.connect(transport);
+                log('Successfully connected to MCP server!', 'success');
+                setStatus('connected');
+              } catch (error) {
+                log('Not connected to server', 'error');
 
-              log('Successfully connected to MCP server!', 'success');
-              setStatus('connected');
+                if (error instanceof UnauthorizedError) {
+                  log('OAuth required - handling authorization...', 'auth');
+
+                  // The provider will automatically fetch the auth code
+                  const authCode = await oauthProvider.getAuthCode();
+
+                  // Complete the auth flow
+                  await transport.finishAuth(authCode);
+
+                  // Close the old transport
+                  await transport.close();
+
+                  // Create a new transport with the authenticated provider
+                  transport = new StreamableHTTPClientTransport(
+                    new URL(serverUrl),
+                    {
+                      authProvider: oauthProvider
+                    }
+                  );
+
+                  // Connect with the new transport
+                  await client.connect(transport);
+                  log('Successfully connected with authentication!', 'success');
+                  setStatus('connected');
+                } else {
+                  throw error;
+                }
+              }
 
               connectBtn.disabled = true;
               listToolsBtn.disabled = false;
               disconnectBtn.disabled = false;
-
-              // Get server info
-              const serverInfo = client.getServerInfo();
-              if (serverInfo) {
-                log(\`Server: \${serverInfo.name} v\${serverInfo.version}\`, 'info');
-              }
-
             } catch (error) {
               log('Connection error: ' + error.message, 'error');
               setStatus('disconnected');
@@ -382,7 +467,7 @@ export default async function (req: Request): Promise<Response> {
 
             client = null;
             transport = null;
-            authTokens = null;
+            oauthProvider = null;
 
             setStatus('disconnected');
             document.getElementById('connectBtn').disabled = false;
@@ -403,4 +488,16 @@ export default async function (req: Request): Promise<Response> {
   `, {
     headers: { 'Content-Type': 'text/html' }
   });
+}
+
+// For Val Town deployment
+export default handleRequest;
+
+// For local development
+if (import.meta.main) {
+  const port = parseInt(Deno.env.get("PORT") || "8000");
+  console.log(`Starting OAuth client server on http://localhost:${port}`);
+  console.log(`Open your browser to http://localhost:${port} to use the client`);
+  
+  Deno.serve({ port }, handleRequest);
 }
