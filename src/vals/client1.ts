@@ -37,103 +37,150 @@ async function handleRequest(req: Request): Promise<Response> {
     });
   }
 
+  // Get SDK version from query param or default
+  const sdkVersion = url.searchParams.get('sdk') || 'latest';
+  const customSdkUrl = url.searchParams.get('customSdk') || '';
+
+  // Determine the SDK base URL
+  let sdkBaseUrl= `https://esm.sh/@modelcontextprotocol/sdk@${sdkVersion}`
+
   // Main client page
   return new Response(`
     <!DOCTYPE html>
     <html>
       <head>
-        <title>MCP OAuth Client</title>
+        <title>MCP OAuth Workbench</title>
         <style>
           body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            margin: 0;
+            padding: 0;
+            background: #1e1e1e;
+            color: #cccccc;
             min-height: 100vh;
           }
           .container {
-            background: white;
-            border-radius: 12px;
-            padding: 40px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            background: #252526;
+            border: 1px solid #3c3c3c;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
           }
-          h1 {
-            color: #333;
-            margin-bottom: 30px;
+          .header {
+            background: #2d2d30;
+            border-bottom: 1px solid #3c3c3c;
+            padding: 10px 20px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 20px;
+          }
+          h1 {
+            color: #cccccc;
+            font-size: 14px;
+            font-weight: normal;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          }
+          .main-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+          }
+          .sidebar {
+            width: 350px;
+            border-right: 1px solid #3c3c3c;
+            padding: 20px;
+            overflow-y: auto;
+            background: #1e1e1e;
           }
           .input-group {
-            margin-bottom: 25px;
+            margin-bottom: 20px;
           }
           label {
             display: block;
-            margin-bottom: 8px;
-            color: #555;
-            font-weight: 500;
-            font-size: 14px;
+            margin-bottom: 6px;
+            color: #969696;
+            font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
           }
-          input {
+          input, select {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e1e4e8;
-            border-radius: 6px;
-            font-size: 14px;
-            transition: border-color 0.2s;
+            padding: 6px 8px;
+            background: #3c3c3c;
+            border: 1px solid #464647;
+            color: #cccccc;
+            font-size: 12px;
+            font-family: inherit;
           }
-          input:focus {
+          input:focus, select:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #007acc;
+            background: #2d2d30;
+          }
+          select {
+            cursor: pointer;
           }
           .button-group {
             display: flex;
-            gap: 10px;
-            margin-top: 30px;
+            gap: 8px;
+            margin-top: 20px;
           }
           button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #0e639c;
             color: white;
-            padding: 12px 24px;
+            padding: 6px 12px;
             border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: 500;
+            font-size: 11px;
+            font-family: inherit;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
           }
           button:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            background: #1177bb;
           }
           button:disabled {
-            background: #ccc;
+            background: #3c3c3c;
+            color: #666;
             cursor: not-allowed;
-            transform: none;
+          }
+          button.secondary {
+            background: #3c3c3c;
+            color: #cccccc;
+          }
+          button.secondary:hover:not(:disabled) {
+            background: #464647;
+          }
+          .log-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #1e1e1e;
+          }
+          .log-header {
+            background: #2d2d30;
+            border-bottom: 1px solid #3c3c3c;
+            padding: 8px 20px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #969696;
           }
           .log {
-            background: #f6f8fa;
-            border: 1px solid #e1e4e8;
-            border-radius: 6px;
-            padding: 20px;
-            margin-top: 30px;
-            max-height: 400px;
+            flex: 1;
             overflow-y: auto;
+            padding: 10px 20px;
+            font-size: 12px;
             font-family: 'SF Mono', Monaco, 'Courier New', monospace;
-            font-size: 13px;
           }
           .log-entry {
-            margin-bottom: 8px;
-            padding: 8px;
-            border-left: 3px solid transparent;
-            background: white;
-            border-radius: 3px;
+            margin-bottom: 4px;
             display: flex;
             align-items: start;
             gap: 10px;
+            line-height: 1.4;
           }
           .log-entry .time {
             color: #6a737d;
@@ -143,88 +190,134 @@ async function handleRequest(req: Request): Promise<Response> {
           .log-entry .message {
             flex: 1;
           }
-          .log-entry.info {
-            border-left-color: #0366d6;
+          .log-entry.info .message {
+            color: #cccccc;
           }
-          .log-entry.success {
-            border-left-color: #28a745;
-            background: #f0fff4;
+          .log-entry.success .message {
+            color: #89d185;
           }
-          .log-entry.error {
-            border-left-color: #dc3545;
-            background: #ffeef0;
+          .log-entry.error .message {
+            color: #f48771;
           }
-          .log-entry.auth {
-            border-left-color: #ffc107;
-            background: #fffbf0;
+          .log-entry.auth .message {
+            color: #dcdcaa;
           }
           .status {
             display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 500;
+            padding: 2px 6px;
+            font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-left: auto;
+            border: 1px solid;
           }
           .status.connected {
-            background: #d4edda;
-            color: #155724;
+            color: #89d185;
+            border-color: #89d185;
           }
           .status.disconnected {
-            background: #f8d7da;
-            color: #721c24;
+            color: #f48771;
+            border-color: #f48771;
           }
           .status.connecting {
-            background: #fff3cd;
-            color: #856404;
+            color: #dcdcaa;
+            border-color: #dcdcaa;
+          }
+          .sdk-info {
+            margin-top: 10px;
+            padding: 8px;
+            background: #2d2d30;
+            border: 1px solid #3c3c3c;
+            font-size: 10px;
+            color: #969696;
+            word-break: break-all;
           }
         </style>
       </head>
       <body>
         <div class="container">
-          <h1>
-            = MCP OAuth Client Demo
+          <div class="header">
+            <h1>MCP OAuth Workbench</h1>
             <span id="status" class="status disconnected">Disconnected</span>
-          </h1>
-
-          <div class="input-group">
-            <label for="serverUrl">MCP Server URL</label>
-            <input
-              type="text"
-              id="serverUrl"
-              placeholder="https://your-mcp-server.val.run"
-              value="https://mcp-oauth-ex3.val.run/mcp"
-            />
           </div>
+          <div class="main-content">
+            <div class="sidebar">
+              <div class="input-group">
+                <label for="serverSelect">Server Endpoint</label>
+                <select id="serverSelect">
+                  <option value="https://mcp-oauth-ex1.val.run/mcp">Example Server 1 (PRM Root)</option>
+                  <option value="https://mcp-oauth-ex2.val.run/mcp">Example Server 2 (PRM Path)</option>
+                  <option value="https://mcp-oauth-ex3.val.run/mcp">Example Server 3 (PRM custom w/ www-authenticate)</option>
+                  <option value="custom">Custom URL...</option>
+                </select>
+              </div>
 
-          <div class="input-group">
-            <label for="callbackUrl">OAuth Callback URL</label>
-            <input
-              type="text"
-              id="callbackUrl"
-              placeholder="https://your-client.val.run/callback"
-              value="${url.origin}/callback"
-              readonly
-            />
+              <div class="input-group" id="customUrlGroup" style="display: none;">
+                <label for="customUrl">Custom Server URL</label>
+                <input
+                  type="text"
+                  id="customUrl"
+                  placeholder="https://your-mcp-server.val.run/mcp"
+                />
+              </div>
+
+              <div class="input-group">
+                <label for="sdkSelect">SDK Version</label>
+                <select id="sdkSelect">
+                ${(() => {
+                  const versions = ['latest', '1.17.3', '1.17.2', '1.17.1', '1.17.0', '1.16.0', '1.15.1', '1.15.0', '1.14.0', '1.13.3', '1.13.2'];
+                  return versions.map(version => {
+                    const isSelected = sdkVersion === version ? 'selected' : '';
+                      const label = version === 'latest' ? '@modelcontextprotocol/sdk@latest' : `@modelcontextprotocol/sdk@${version}`;
+                      return `<option value="${version}" ${isSelected}>${label}</option>`;
+                    }).join('\n                  ');
+                  })()}
+                </select>
+              </div>
+
+              <div class="input-group" id="customSdkGroup" style="${customSdkUrl ? '' : 'display: none;'}">
+                <label for="customSdk">Custom SDK URL</label>
+                <input
+                  type="text"
+                  id="customSdk"
+                  placeholder="https://esm.sh/@your/sdk@version"
+                  value="${customSdkUrl}"
+                />
+              </div>
+
+              <div class="sdk-info">
+                Current SDK: ${sdkBaseUrl}
+              </div>
+
+              <div class="input-group">
+                <label for="callbackUrl">OAuth Callback URL</label>
+                <input
+                  type="text"
+                  id="callbackUrl"
+                  value="${url.origin}/callback"
+                  readonly
+                />
+              </div>
+
+              <div class="button-group">
+                <button id="connectBtn">Connect</button>
+                <button id="listToolsBtn" disabled>List Tools</button>
+                <button id="disconnectBtn" class="secondary" disabled>Disconnect</button>
+                <button id="clearLogBtn" class="secondary">Clear Log</button>
+              </div>
+            </div>
+            <div class="log-container">
+              <div class="log-header">Console Output</div>
+              <div class="log" id="log"></div>
+            </div>
           </div>
-
-          <div class="button-group">
-            <button id="connectBtn">Connect to Server</button>
-            <button id="listToolsBtn" disabled>List Tools</button>
-            <button id="disconnectBtn" disabled>Disconnect</button>
-            <button id="clearLogBtn">Clear Log</button>
-          </div>
-
-          <div class="log" id="log"></div>
         </div>
 
         <script type="module">
-          // Import MCP SDK from esm.sh with direct dist/esm paths
-          import { Client } from 'https://esm.sh/@modelcontextprotocol/sdk@latest/dist/esm/client';
-          import { StreamableHTTPClientTransport } from 'https://esm.sh/@modelcontextprotocol/sdk@latest/dist/esm/client/streamableHttp';
-          import { UnauthorizedError } from 'https://esm.sh/@modelcontextprotocol/sdk@latest/dist/esm/client/auth';
+          // Import MCP SDK dynamically based on selection
+          import { Client } from '${sdkBaseUrl}/dist/esm/client';
+          import { StreamableHTTPClientTransport } from '${sdkBaseUrl}/dist/esm/client/streamableHttp';
+          import { UnauthorizedError } from '${sdkBaseUrl}/dist/esm/client/auth';
 
           // OAuth Provider implementation for browser
           class BrowserOAuthProvider {
@@ -337,13 +430,105 @@ async function handleRequest(req: Request): Promise<Response> {
             statusEl.textContent = status.charAt(0).toUpperCase() + status.slice(1);
           }
 
+          // Save preferences to localStorage
+          function savePreferences() {
+            const serverSelect = document.getElementById('serverSelect');
+            const customUrl = document.getElementById('customUrl').value;
+
+            localStorage.setItem('mcp_server_select', serverSelect.value);
+            if (serverSelect.value === 'custom') {
+              localStorage.setItem('mcp_custom_url', customUrl);
+            }
+          }
+
+          // Load preferences from localStorage
+          function loadPreferences() {
+            const savedServer = localStorage.getItem('mcp_server_select');
+            const savedCustomUrl = localStorage.getItem('mcp_custom_url');
+
+            if (savedServer) {
+              document.getElementById('serverSelect').value = savedServer;
+              if (savedServer === 'custom') {
+                document.getElementById('customUrlGroup').style.display = 'block';
+                if (savedCustomUrl) {
+                  document.getElementById('customUrl').value = savedCustomUrl;
+                }
+              }
+            }
+          }
+
+          // Handle server selection change
+          document.getElementById('serverSelect').addEventListener('change', function(e) {
+            const customUrlGroup = document.getElementById('customUrlGroup');
+            if (e.target.value === 'custom') {
+              customUrlGroup.style.display = 'block';
+            } else {
+              customUrlGroup.style.display = 'none';
+            }
+            savePreferences();
+          });
+
+          // Handle custom URL change
+          document.getElementById('customUrl').addEventListener('change', savePreferences);
+
+          // Handle SDK selection change
+          document.getElementById('sdkSelect').addEventListener('change', function(e) {
+            const customSdkGroup = document.getElementById('customSdkGroup');
+            if (e.target.value === 'custom-sdk') {
+              customSdkGroup.style.display = 'block';
+            } else {
+              customSdkGroup.style.display = 'none';
+            }
+
+            // Reload the page with the new SDK version
+            const url = new URL(window.location.href);
+            if (e.target.value === 'custom-sdk') {
+              const customSdk = document.getElementById('customSdk').value;
+              if (customSdk) {
+                url.searchParams.set('customSdk', customSdk);
+                url.searchParams.delete('sdk');
+              } else {
+                log('Please enter a custom SDK URL first', 'error');
+                return;
+              }
+            } else {
+              url.searchParams.set('sdk', e.target.value);
+              url.searchParams.delete('customSdk');
+            }
+
+            log('Reloading with new SDK version...', 'info');
+            setTimeout(() => {
+              window.location.href = url.toString();
+            }, 500);
+          });
+
+          // Handle custom SDK URL change
+          document.getElementById('customSdk').addEventListener('change', function(e) {
+            if (document.getElementById('sdkSelect').value === 'custom-sdk') {
+              const url = new URL(window.location.href);
+              url.searchParams.set('customSdk', e.target.value);
+              url.searchParams.delete('sdk');
+
+              log('Reloading with custom SDK...', 'info');
+              setTimeout(() => {
+                window.location.href = url.toString();
+              }, 500);
+            }
+          });
+
           window.connectToServer = async function() {
-            const serverUrl = document.getElementById('serverUrl').value;
+            const serverSelect = document.getElementById('serverSelect');
             const callbackUrl = document.getElementById('callbackUrl').value;
 
-            if (!serverUrl) {
-              log('Please enter a server URL', 'error');
-              return;
+            let serverUrl;
+            if (serverSelect.value === 'custom') {
+              serverUrl = document.getElementById('customUrl').value;
+              if (!serverUrl) {
+                log('Please enter a custom server URL', 'error');
+                return;
+              }
+            } else {
+              serverUrl = serverSelect.value;
             }
 
             const connectBtn = document.getElementById('connectBtn');
@@ -355,6 +540,7 @@ async function handleRequest(req: Request): Promise<Response> {
 
             try {
               log('Initializing MCP client...', 'info');
+              log('Using SDK: ${sdkBaseUrl}', 'info');
 
               // Set up OAuth provider
               const clientMetadata = {
@@ -386,7 +572,7 @@ async function handleRequest(req: Request): Promise<Response> {
 
               // Try to connect - handle OAuth if needed
               try {
-                log('Connecting to server...', 'info');
+                log('Connecting to server: ' + serverUrl, 'info');
                 await client.connect(transport);
                 log('Successfully connected to MCP server!', 'success');
                 setStatus('connected');
@@ -424,6 +610,8 @@ async function handleRequest(req: Request): Promise<Response> {
               connectBtn.disabled = true;
               listToolsBtn.disabled = false;
               disconnectBtn.disabled = false;
+
+              savePreferences();
             } catch (error) {
               log('Connection error: ' + error.message, 'error');
               setStatus('disconnected');
@@ -482,8 +670,12 @@ async function handleRequest(req: Request): Promise<Response> {
             log('Log cleared', 'info');
           }
 
+          // Load saved preferences
+          loadPreferences();
+
           // Initial log entry
-          log('MCP OAuth Client ready. Enter a server URL to connect.', 'info');
+          log('MCP OAuth Workbench ready', 'info');
+          log('SDK loaded: ${sdkBaseUrl}', 'info');
 
           // Attach event listeners
           document.getElementById('connectBtn').addEventListener('click', connectToServer);
