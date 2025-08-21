@@ -195,7 +195,7 @@ async function handleRequest(req: Request): Promise<Response> {
               type="text"
               id="serverUrl"
               placeholder="https://your-mcp-server.val.run"
-              value="https://mcp-oauth-ex1.val.run/mcp"
+              value="https://mcp-oauth-ex3.val.run/mcp"
             />
           </div>
 
@@ -214,6 +214,7 @@ async function handleRequest(req: Request): Promise<Response> {
             <button id="connectBtn">Connect to Server</button>
             <button id="listToolsBtn" disabled>List Tools</button>
             <button id="disconnectBtn" disabled>Disconnect</button>
+            <button id="clearLogBtn">Clear Log</button>
           </div>
 
           <div class="log" id="log"></div>
@@ -390,9 +391,8 @@ async function handleRequest(req: Request): Promise<Response> {
                 log('Successfully connected to MCP server!', 'success');
                 setStatus('connected');
               } catch (error) {
-                log('Not connected to server', 'error');
-
-                if (error instanceof UnauthorizedError) {
+                // TODO: why is this instanceof not working
+                if (error instanceof UnauthorizedError || error.message == 'Unauthorized') {
                   log('OAuth required - handling authorization...', 'auth');
 
                   // The provider will automatically fetch the auth code
@@ -475,6 +475,13 @@ async function handleRequest(req: Request): Promise<Response> {
             document.getElementById('disconnectBtn').disabled = true;
           }
 
+          // Clear log function
+          window.clearLog = function() {
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML = '';
+            log('Log cleared', 'info');
+          }
+
           // Initial log entry
           log('MCP OAuth Client ready. Enter a server URL to connect.', 'info');
 
@@ -482,6 +489,7 @@ async function handleRequest(req: Request): Promise<Response> {
           document.getElementById('connectBtn').addEventListener('click', connectToServer);
           document.getElementById('listToolsBtn').addEventListener('click', listTools);
           document.getElementById('disconnectBtn').addEventListener('click', disconnect);
+          document.getElementById('clearLogBtn').addEventListener('click', clearLog);
         </script>
       </body>
     </html>
@@ -498,6 +506,6 @@ if (import.meta.main) {
   const port = parseInt(Deno.env.get("PORT") || "8000");
   console.log(`Starting OAuth client server on http://localhost:${port}`);
   console.log(`Open your browser to http://localhost:${port} to use the client`);
-  
+
   Deno.serve({ port }, handleRequest);
 }

@@ -211,6 +211,35 @@ function generateIndexHtml(config: ServerConfig): string {
 function createResourceServer(config: ServerConfig) {
   const app = new Hono();
 
+  // CORS middleware - apply to all routes
+  app.use("*", async (c, next) => {
+    // Handle preflight requests
+    if (c.req.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization, mcp-protocol-version",
+          "Access-Control-Max-Age": "86400",
+        },
+      });
+    }
+
+    // Add CORS headers to all responses
+    await next();
+
+    // Add CORS headers after the response is generated
+    c.header("Access-Control-Allow-Origin", "*");
+    c.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    c.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+    // If WWW-Authenticate header is present, expose it
+    if (c.res.headers.get("WWW-Authenticate")) {
+      c.header("Access-Control-Expose-Headers", "WWW-Authenticate");
+    }
+  });
+
   // Root index page
   app.get("/", (c) => c.html(generateIndexHtml(config)));
 
